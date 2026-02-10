@@ -9,8 +9,14 @@ Ti=0.76*Tu; % Integral time
 Td=0.19*Tu; % Derivative time
 mu=0.1; % Derivative filter parameter
 Ts=0.02; % Sampling time
-theta=[0]; % Auxiliary parameter
-N = 2; % Number of states in controller
+
+% theta används här som två flaggor:
+% theta(1)=anti-windup (0 av, 1 på)
+% theta(2)=stötfri auto/man (0 av, 1 på)
+theta = [1; 1];
+
+N = 3; % [I_mem; e_prev; bias]
+
 ubounds=[-6;6]; % Control signal limits
 
 %% Signals
