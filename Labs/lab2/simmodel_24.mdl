@@ -46,8 +46,8 @@ __MWOPC_PART_BEGIN__ /metadata/coreProperties.xml
   <dcterms:created xsi:type="dcterms:W3CDTF">2009-12-04T12:31:32Z</dcterms:created>
   <dc:creator>petersson</dc:creator>
   <cp:lastModifiedBy>ollha403</cp:lastModifiedBy>
-  <dcterms:modified xsi:type="dcterms:W3CDTF">2026-02-12T16:15:49Z</dcterms:modified>
-  <cp:revision>31.7</cp:revision>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">2026-02-12T16:38:39Z</dcterms:modified>
+  <cp:revision>31.14</cp:revision>
   <cp:version>R2024a</cp:version>
 </cp:coreProperties>
 
@@ -122,7 +122,7 @@ __MWOPC_PART_BEGIN__ /simulink/blockdiagram.xml
     <ConfigManagerSettings>
       <P Name="ModifiedByFormat">%&lt;Auto&gt;</P>
       <P Name="ModifiedDateFormat">%&lt;Auto&gt;</P>
-      <P Name="ModelVersionFormat">%&lt;AutoIncrement:31.7&gt;</P>
+      <P Name="ModelVersionFormat">%&lt;AutoIncrement:31.14&gt;</P>
     </ConfigManagerSettings>
     <EditorSettings>
       <P Name="LibraryLinkDisplay">none</P>
@@ -959,8 +959,8 @@ __MWOPC_PART_BEGIN__ /simulink/graphicalInterface.xml
 __MWOPC_PART_BEGIN__ /simulink/modelDictionary.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <MF0 version="1.1" defaultPackage="slid" packageUris="http://schema.mathworks.com/mf0/slid/R2023a_20220628">
-  <System type="System" uuid="7a0c2311-ed57-4b65-8e14-8f0573500b60">
-    <Interface type="Interface" uuid="0a0dbcb6-4610-44ee-9319-0c57dcdc9095"/>
+  <System type="System" uuid="3e371991-09d2-4eac-9c7d-d164397441aa">
+    <Interface type="Interface" uuid="a86ae402-7c60-4ac3-b798-17e0896ef4f0"/>
   </System>
 </MF0>
 __MWOPC_PART_BEGIN__ /simulink/plugins/sl_paper_props.xml
@@ -1169,10 +1169,10 @@ __MWOPC_PART_BEGIN__ /simulink/stateflow/chart_16.xml
       <eml>
         <P Name="isEML">1</P>
         <P Name="script">function [un,xn]=computeux(umann,amn,rm,rn,yn,ctrlparam,ubounds,Ts,xn_1)
-% STATE (N = 3):
-%   xn_1(1) = I_mem   (integrator-minne FÖRE uppdatering)
-%   xn_1(2) = e_prev  (föregående fel)
-%   xn_1(3) = bias    (manual-bias för stötfri auto&lt;-&gt;man)
+% STATE (N = 4):
+%   xn_1(1) = I_mem  
+%   xn_1(2) = e_prev  
+%   xn_1(3) = bias    
 %   xn_1(4) = D_mem
 
 K     = double(ctrlparam(1));
@@ -1180,7 +1180,8 @@ Ti    = double(ctrlparam(2));
 Td    = double(ctrlparam(3));
 Mu    = double(ctrlparam(4));
 
-theta = double(ctrlparam(5:end));   % ctrlparam = [K;Ti;Td;mu;Kf;theta(:)]
+% ctrlparam = [K;Ti;Td;mu;Kf;theta(:)]
+theta = double(ctrlparam(5:end));   
 
 enableAW   = (numel(theta) &gt;= 1) &amp;&amp; (theta(1) ~= 0);
 enableBump = (numel(theta) &gt;= 2) &amp;&amp; (theta(2) ~= 0);
@@ -1203,20 +1204,17 @@ umax = double(ubounds(2));
 I_mem  = double(xn_1(1));
 e_prev = double(xn_1(2));
 bias   = double(xn_1(3));
-
-D_mem  = 0;
-if numel(xn_1) &gt;= 4
-    D_mem = double(xn_1(4));
-end
+D_mem  = double(xn_1(4));
 
 % Control error
 e = rm - yn;
 
+% P-Part
 P = K*e;
 
 % D-part (implemented on discrete recursion)
 if Td &gt; 0
-    Tf = Mu * Td; % filtertidkonstant
+    Tf = Mu * Td;
     if Tf &gt; 0
         alpha = Tf/(Tf + Ts);
         D_mem = alpha * D_mem + (K * Td)/(Tf + Ts) * (e - e_prev);
@@ -1234,33 +1232,33 @@ end
 isAuto = (amn &gt;= 0.5);   
 
 if isAuto
-    % ===== AUTOMATISK MOD =====
-    % Integrera (kandidat)
+    % I-Part
     I_cand = I_mem;
     if Ti &gt; 0
         I_cand = I_mem + K*Ts*e/Ti;
     end
 
-    % Kandidat-utgång före mättnad
+    % V-candidate before saturation
     v_cand = P + I_cand + D;
 
-    % Mättnad
+    % saturation
     un = v_cand;
-    un = un + rn*Kf;  %framkoppling och u0
+    un = un + rn*Kf;  %feedforwarding
     
     if un &lt; umin, un = umin; end
     if un &gt; umax, un = umax; end
     
-    % Anti-windup (clamping): frys integrator om mättad och felet driver mer in i mättnad
+    % Anti-windup. Freeze integrator if saturated and the error drives
+    % further into saturation
     if enableAW &amp;&amp; Ti &gt; 0
         satHigh = (v_cand &gt; umax) &amp;&amp; (un &gt;= umax);
         satLow  = (v_cand &lt; umin) &amp;&amp; (un &lt;= umin);
 
         if (satHigh &amp;&amp; e &gt; 0) || (satLow &amp;&amp; e &lt; 0)
-            % Frys integrator (revertera integration)
+            % Freeze integration
             I_cand = I_mem;
 
-            % Räkna om med fryst integrator (kan av-mätta)
+            % Re-calc with frozen i-part
             v = P + I_cand + D;
             un = v;
             if un &lt; umin, un = umin; end
@@ -1269,34 +1267,34 @@ if isAuto
         
     end
 
-    % Stötfri auto-&gt;man: uppdatera bias så att u = umann + bias blir kontinuerlig vid modbyte
+    % Bumpless auto -&gt; man
+    % Update bias so u = umann + bias becomes cont. 
     if enableBump
         bias = un - umann;
     else
         bias = 0;
     end
 
-    % Spara integrator
+    % Save integrator
     I_mem = I_cand;
 
 else
-    % ===== MANUELL MOD =====
+    % Manual code
     if enableBump
-        % Stötfri: applicera manuellsignal med bias (bias hålls konstant i manuell mod)
+        % Bumpless: aaply man-signal with bias
         un = umann + bias;
     else
-        % Icke-stötfri: ren manuell
+        % Non-Bumpless: just man-signal
         un = umann;
         bias = 0;
     end
 
-    % Mättnad även i manuell mod
+    % Saturation
     if un &lt; umin, un = umin; end
     if un &gt; umax, un = umax; end
 
-    % Stötfri man-&gt;auto: välj I_mem så att nästa autosampling ger v == un
-    % Auto gör: I_cand = I_mem + K*Ts*e/Ti, v = P + I_cand + D.
-    % Vill: v == un  =&gt; I_mem = un - P - D - K*Ts*e/Ti
+    % Bumpless man -&gt; auto: Choose I_mem so next sampling gives the current
+    % actuator value. Aka want un == current manual output
     if enableBump &amp;&amp; Ti &gt; 0
         I_mem = un - P - D - K*Ts*e/Ti;
     end
@@ -2362,7 +2360,7 @@ __MWOPC_PART_BEGIN__ /simulink/windowsInfo.xml
           <P Name="Minimized" Class="char">Unset</P>
         </Object>
       </Array>
-      <P Name="WindowState" Class="char">AAAA/wAAAAD9AAAAAwAAAAAAAAJtAAAF1fwCAAAABPsAAAAWAEQAbwBjAGsAVwBpAGQAZwBlAHQAMwEAAAAxAAAB+AAAAAAAAAAA+wAAABYARABvAGMAawBXAGkAZABnAGUAdAA0AAAAAAD/////AAAAAAAAAAD8AAAA8gAABdUAAAAAAP////oAAAABAgAAAAL7AAAAUgBHAEwAVQBFADIAIAB0AHIAZQBlACAAYwBvAG0AcABvAG4AZQBuAHQALwBHAEwAVQBFADIAIAB0AHIAZQBlACAAYwBvAG0AcABvAG4AZQBuAHQAAAAAAP////8AAABiAP////sAAABsAEwAaQBiAHIAYQByAHkAQgByAG8AdwBzAGUAcgAyACAATABpAGIAcgBhAHIAeQBCAHIAbwB3AHMAZQByAFMAdAB1AGQAaQBvAEMAbwBtAHAAbwBuAGUAbgB0AC8AcwBpAG0AbQBvAGQAZQBsAQAAAAD/////AAAAAAAAAAD7AAAAYABTAGkAbQB1AGwAaQBuAGsAOgBFAGQAaQB0AG8AcgA6AFIAZQBmAGUAcgBlAG4AYwBlAGQARgBpAGwAZQBzAC8AUgBlAGYAZQByAGUAbgBjAGUAZAAgAEYAaQBsAGUAcwAAAAAA/////wAAAIkA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAAFQARwBMAFUARQAyADoAUAByAG8AcABlAHIAdAB5AEkAbgBzAHAAZQBjAHQAbwByAC8AUAByAG8AcABlAHIAdAB5ACAASQBuAHMAcABlAGMAdABvAHIAAAAAAP////8AAAGsAP///wAAAAMAAAO2AAACWvwBAAAAAfv/////AAAAAAAAAAO2AAACeQD///8AAAO2AAAD5AAAAAEAAAACAAAAAQAAAAL8AAAAAA==</P>
+      <P Name="WindowState" Class="char">AAAA/wAAAAD9AAAAAwAAAAAAAAJtAAAF1fwCAAAABPsAAAAWAEQAbwBjAGsAVwBpAGQAZwBlAHQAMwEAAAAxAAAB+AAAAAAAAAAA+wAAABYARABvAGMAawBXAGkAZABnAGUAdAA0AAAAAAD/////AAAAAAAAAAD8AAAA8gAABdUAAAAAAP////oAAAABAgAAAAL7AAAAUgBHAEwAVQBFADIAIAB0AHIAZQBlACAAYwBvAG0AcABvAG4AZQBuAHQALwBHAEwAVQBFADIAIAB0AHIAZQBlACAAYwBvAG0AcABvAG4AZQBuAHQAAAAAAP////8AAABiAP////sAAABsAEwAaQBiAHIAYQByAHkAQgByAG8AdwBzAGUAcgAyACAATABpAGIAcgBhAHIAeQBCAHIAbwB3AHMAZQByAFMAdAB1AGQAaQBvAEMAbwBtAHAAbwBuAGUAbgB0AC8AcwBpAG0AbQBvAGQAZQBsAQAAAAD/////AAAAAAAAAAD7AAAAYABTAGkAbQB1AGwAaQBuAGsAOgBFAGQAaQB0AG8AcgA6AFIAZQBmAGUAcgBlAG4AYwBlAGQARgBpAGwAZQBzAC8AUgBlAGYAZQByAGUAbgBjAGUAZAAgAEYAaQBsAGUAcwAAAAAA/////wAAAIkA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAAFQARwBMAFUARQAyADoAUAByAG8AcABlAHIAdAB5AEkAbgBzAHAAZQBjAHQAbwByAC8AUAByAG8AcABlAHIAdAB5ACAASQBuAHMAcABlAGMAdABvAHIAAAAAAP////8AAAGsAP///wAAAAMAAAO2AAACWvwBAAAAAfv/////AAAAAAD/////AAACeQD///8AAAO2AAAD5AAAAAEAAAACAAAAAQAAAAL8AAAAAA==</P>
       <Array PropName="PersistedApps" Type="Cell" Dimension="0*1"/>
       <P Name="WindowUuid" Class="char">a6e080df-5ce5-4d97-bb7a-3e0281771e20</P>
     </Object>
