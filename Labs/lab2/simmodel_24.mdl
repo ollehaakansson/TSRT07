@@ -46,8 +46,8 @@ __MWOPC_PART_BEGIN__ /metadata/coreProperties.xml
   <dcterms:created xsi:type="dcterms:W3CDTF">2009-12-04T12:31:32Z</dcterms:created>
   <dc:creator>petersson</dc:creator>
   <cp:lastModifiedBy>ollha403</cp:lastModifiedBy>
-  <dcterms:modified xsi:type="dcterms:W3CDTF">2026-02-12T16:03:17Z</dcterms:modified>
-  <cp:revision>31.5</cp:revision>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">2026-02-12T16:15:49Z</dcterms:modified>
+  <cp:revision>31.7</cp:revision>
   <cp:version>R2024a</cp:version>
 </cp:coreProperties>
 
@@ -122,7 +122,7 @@ __MWOPC_PART_BEGIN__ /simulink/blockdiagram.xml
     <ConfigManagerSettings>
       <P Name="ModifiedByFormat">%&lt;Auto&gt;</P>
       <P Name="ModifiedDateFormat">%&lt;Auto&gt;</P>
-      <P Name="ModelVersionFormat">%&lt;AutoIncrement:31.5&gt;</P>
+      <P Name="ModelVersionFormat">%&lt;AutoIncrement:31.7&gt;</P>
     </ConfigManagerSettings>
     <EditorSettings>
       <P Name="LibraryLinkDisplay">none</P>
@@ -1184,8 +1184,9 @@ theta = double(ctrlparam(5:end));   % ctrlparam = [K;Ti;Td;mu;Kf;theta(:)]
 
 enableAW   = (numel(theta) &gt;= 1) &amp;&amp; (theta(1) ~= 0);
 enableBump = (numel(theta) &gt;= 2) &amp;&amp; (theta(2) ~= 0);
-Kf = theta(3);
 
+% Feedforward gain
+Kf = theta(3);
 
 % Cast inputs
 umann = double(umann);
@@ -1194,6 +1195,7 @@ rn    = double(rn);
 yn    = double(yn);
 Ts    = double(Ts);
 
+% Saturation limits
 umin = double(ubounds(1));
 umax = double(ubounds(2));
 
@@ -1201,32 +1203,35 @@ umax = double(ubounds(2));
 I_mem  = double(xn_1(1));
 e_prev = double(xn_1(2));
 bias   = double(xn_1(3));
+
 D_mem  = 0;
 if numel(xn_1) &gt;= 4
     D_mem = double(xn_1(4));
 end
 
-% Signals
+% Control error
 e = rm - yn;
 
-% Derivata (bakåtdifferens på felet)
+P = K*e;
+
+% D-part (implemented on discrete recursion)
 if Td &gt; 0
-    Tf = Mu*Td; % filtertidkonstant
+    Tf = Mu * Td; % filtertidkonstant
     if Tf &gt; 0
         alpha = Tf/(Tf + Ts);
-        D_mem = alpha*D_mem + (K*Td)/(Tf + Ts) * (e - e_prev);
+        D_mem = alpha * D_mem + (K * Td)/(Tf + Ts) * (e - e_prev);
         D = D_mem;
     else
-        D = K * Td(e - e_prev)/Ts;
+        D = K * Td * (e - e_prev)/Ts;
         D_mem = D;
     end
 else
     D = 0;
     D_mem = 0;
 end
-P = K*e;
 
-isAuto = (amn &gt;= 0.5);   % 1=auto, 0=manuell
+% 1=auto, 0=manuell
+isAuto = (amn &gt;= 0.5);   
 
 if isAuto
     % ===== AUTOMATISK MOD =====

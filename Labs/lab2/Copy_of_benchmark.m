@@ -11,7 +11,7 @@ Ti=27; % Integral time
 Td=0; % Derivative time
 mu=0.1; % Derivative filter parameter
 Ts=0.02; % Sampling time
-Kf = 4; % Feedforward
+Kf = 3.8; % Feedforward
 
 anti_wind_up = 1; %Anti wind up
 anti_bump = 1; % Anti bump
