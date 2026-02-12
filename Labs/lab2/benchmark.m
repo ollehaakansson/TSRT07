@@ -20,7 +20,7 @@ theta = [1; 1; Kf];
 
 N = 3; % [I_mem; e_prev; bias]
 
-ubounds=[-6;6]; % Control signal limits
+ubounds=[-6;10]; % Control signal limits
 
 %% Signals
 

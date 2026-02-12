@@ -7,6 +7,7 @@ switch lower(labprocess)
         load paramel
 
         sys = tf([elparam.K],[elparam.T,2,0]);
+        
 %         u0 = 0;
 %         y0 = 0;
         % ***********************************************
@@ -23,8 +24,11 @@ switch lower(labprocess)
         % ***********************************************
         load paramvatten
         
-        sys = tf([vattenparam.K],[vattenparam.T,1]);
-        
+        %sys = tf([vattenparam.K],[vattenparam.T,1]);
+        sys = tf([3.47],[26.8,1]);
+
+        sys0 = tf([3.47],[1]);
+         Gm = sys/sys0;
          u0 = 4;
          y0 = 5.5;
         % ***********************************************

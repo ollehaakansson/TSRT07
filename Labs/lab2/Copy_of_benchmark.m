@@ -16,10 +16,11 @@ Kf = 3;
 % theta används här som två flaggor:
 % theta(1)=anti-windup (0 av, 1 på)
 % theta(2)=stötfri auto/man (0 av, 1 på)
-theta = [1; 1; Kf];
 
+u0 = 4;
+y0 = 5.5;
 N = 3; % [I_mem; e_prev; bias]
-
+theta = [1; 1; Kf; u0];
 ubounds=[0;10]; % Control signal limits
 
 %% Signals
