@@ -24,6 +24,7 @@ switch lower(labprocess)
         load paramvatten
         
         sys = tf([vattenparam.K],[vattenparam.T,1]);
+        
          u0 = 4;
          y0 = 5.5;
         % ***********************************************

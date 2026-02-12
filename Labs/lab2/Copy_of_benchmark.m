@@ -1,17 +1,17 @@
 %% The system
-sys = tf([2],[1,7,16,10]);
-sys0 = tf([2],[10]);
+sys = tf([3.47],[26.8,1]);
+sys0 = tf([3.47],[1]);
 Gm = sys/sys0;
 
 %% PID-parameters
 Ku=51;
 Tu=1.57;
-K=0.35*Ku; % Controller gain
-Ti=0.76*Tu; % Integral time
-Td=0.19*Tu; % Derivative time
+K=3.86; % Controller gain
+Ti=27; % Integral time
+Td=0; % Derivative time
 mu=0.1; % Derivative filter parameter
 Ts=0.02; % Sampling time
-Kf = 7;
+Kf = 3;
 
 % theta används här som två flaggor:
 % theta(1)=anti-windup (0 av, 1 på)
@@ -20,12 +20,11 @@ theta = [1; 1; Kf];
 
 N = 3; % [I_mem; e_prev; bias]
 
-ubounds=[-6;6]; % Control signal limits
+ubounds=[0;10]; % Control signal limits
 
 %% Signals
 
 load benchmarksignals
-
 
 
 %% Plots
