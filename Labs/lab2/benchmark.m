@@ -3,24 +3,25 @@ sys = tf([2],[1,7,16,10]);
 sys0 = tf([2],[10]);
 Gm = sys/sys0;
 
+function [un,xn]=computeux(umann,amn,rm,rn,yn,ctrlparam,ubounds,Ts,xn_1)
 %% PID-parameters
 Ku=51;
 Tu=1.57;
-K=0.35*Ku; % Controller gain
-Ti=0.76*Tu; % Integral time
-Td=0.19*Tu; % Derivative time
+K=3.86; % Controller gain
+Ti=27; % Integral time
+Td=0; % Derivative time
 mu=0.1; % Derivative filter parameter
 Ts=0.02; % Sampling time
-Kf = 7;
+Kf = 3.8; % Feedforward
 
-% theta används här som två flaggor:
-% theta(1)=anti-windup (0 av, 1 på)
-% theta(2)=stötfri auto/man (0 av, 1 på)
-theta = [1; 1; Kf];
+anti_wind_up = 1; %Anti wind up
+anti_bump = 1; % Anti bump
 
-N = 3; % [I_mem; e_prev; bias]
-
-ubounds=[-6;10]; % Control signal limits
+u0 = 4;
+y0 = 5.5;
+N = 4; % [I_mem; e_prev; bias; d_mem]
+theta = [anti_wind_up; anti_bump; Kf];
+ubounds=[0;10]; % Control signal limits
 
 %% Signals
 

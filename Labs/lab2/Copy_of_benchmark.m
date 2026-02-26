@@ -11,16 +11,15 @@ Ti=27; % Integral time
 Td=0; % Derivative time
 mu=0.1; % Derivative filter parameter
 Ts=0.02; % Sampling time
-Kf = 3;
+Kf = 3.8; % Feedforward
 
-% theta används här som två flaggor:
-% theta(1)=anti-windup (0 av, 1 på)
-% theta(2)=stötfri auto/man (0 av, 1 på)
+anti_wind_up = 1; %Anti wind up
+anti_bump = 1; % Anti bump
 
 u0 = 4;
 y0 = 5.5;
-N = 3; % [I_mem; e_prev; bias]
-theta = [1; 1; Kf; u0];
+N = 4; % [I_mem; e_prev; bias; d_mem]
+theta = [anti_wind_up; anti_bump; Kf];
 ubounds=[0;10]; % Control signal limits
 
 %% Signals
@@ -31,7 +30,7 @@ load benchmarksignals
 %% Plots
 
 % Simulate the model to get data
-sim('simmodel',ref(end,1));
+sim('simmodel_24',ref(end,1));
 
 figure(1)
 subplot(4,1,1)

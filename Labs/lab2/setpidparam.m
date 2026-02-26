@@ -7,7 +7,7 @@ Ti=27; % Integral time
 Td=0; % Derivative time
 mu=0.1; % Derivative filter parameter
 Ts=0.02; % Sampling time
-Kf = 2;
+Kf = 3.8;
 ubounds=[0;10]; %Control signal limits
 
 u0 = 4;
