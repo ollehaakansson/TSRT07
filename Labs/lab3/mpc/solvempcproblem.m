@@ -13,5 +13,5 @@ U=quadprog(S'*Mb'*Q1b*Mb*S+Q2b,S'*Mb'*Q1b*Mb*H*x,Au,bu,...
 [],[],[],[],[],options);
 
 
-disp(S'*Mb'*Q1b*Mb*H*x)
+%disp(S'*Mb'*Q1b*Mb*H*x)
 un=U(1:m);
