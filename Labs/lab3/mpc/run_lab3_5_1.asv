@@ -83,7 +83,7 @@ fprintf('L: min=%.4f max=%.4f   allowed [0 5]\n', min(L), max(L));
 
 fprintf('\nDone. Results stored in RES.\n');
 
-% Plots
+%% Plots
 t_ol = RES.ol_dist.X.time(:);
 x_ol = RES.ol_dist.X.signals.values;
 
@@ -119,7 +119,7 @@ save('results_51.mat','RES','N','Q1_cl','Q2_cl','ubounds','Ts');
 
 % Settling time
 function T = settlingTime(Xstruct, xstar, tol)
-% First time after which both |x1-xstar1| and |x8-xstar8| stay <= tol forever.
+% First time after which BOTH |x1-xstar1| and |x8-xstar8| stay <= tol forever.
 t = Xstruct.time(:);
 x = Xstruct.signals.values;
 
@@ -137,10 +137,3 @@ else
     T = t(idx);
 end
 end
-
-
-%% Result
-% open loop: 154 min
-% mpc: 25 min
-% Mpc is 129 minutes faster than open loop.
-% Aka ish 6.2 times faster
