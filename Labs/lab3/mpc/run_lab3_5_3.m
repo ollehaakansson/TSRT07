@@ -1,0 +1,129 @@
+clear; close all; clc
+load distilldata.mat
+
+% Disktretisera (ZOH)
+Ts = 1;
+A = [A, zeros(size(A,1),1); zeros(1,size(A,2)), 0];
+B = [B, zeros(size(B,1),1); zeros(1,size(B,2)), -Ts/3];
+Mz = [Mz, zeros(size(Mz,1),1); zeros(1,size(Mz,2)), 1];
+D = 0;
+
+sys  = ss(A,B,[], []);
+sysd = c2d(sys, Ts, 'zoh');
+F = sysd.A;
+G = sysd.B;
+
+% MPC params 
+N  = 70;
+p  = size(Mz,1);
+m  = size(G,2);
+
+q_z3 = 200;
+
+Q1 = diag([110, 200, q_z3]); % testat allt mellan 50-150 för första param
+Q2 = diag([1,1 1000]);   % istället för 3e-4
+
+% Bounds på Δu (eftersom regulatorn jobbar med avvikelser)
+ubounds = [ -V0, 5 - V0;
+            -L0, 5 - L0;
+            - F0, 5 - F0];
+
+% Initialtillstånd: jämvikt
+x0 = xstar(:);
+
+% Reset I-action memory
+global uold
+uold = [];
+
+% Load model
+mdl = 'distillmpcbuffer';
+if ~bdIsLoaded(mdl), load_system(mdl); end
+
+% Peka MPC-blocket till solvempcproblem_52
+blk = [mdl '/MPC Controller'];
+maskNames  = get_param(blk,'MaskNames');
+maskValues = get_param(blk,'MaskValues');
+idx = find(strcmp(maskNames,'ufname'),1);
+maskValues{idx} = '''solvempcproblem_52''';
+set_param(blk,'MaskValues',maskValues);
+
+% Simulera. Av någon anledning så uppdaterades inte mina params om jag it
+% kör följande 2 rader.
+set_param(mdl,'FastRestart','off'); %1
+set_param(mdl,'SimulationCommand','update'); %2
+set_param(mdl,'StopTime','100');
+evalc("sim(mdl);");
+
+RES52.X = X;
+RES52.U = U;
+
+% Bygg z(t) = Mz*(x - x*)
+t = X.time(:);
+x = X.signals.values;                 % absolut x
+x_dev = x - xstar(:).';   % N×8 (radvektor subtraheras från varje rad)
+z     = x_dev * Mz.';     % N×2
+
+% Referens r(t) (preview är inne i controllern, här använder vi bara för plot)
+r = zeros(numel(t),2);
+r(t>=20 & t<60, :) = repmat([0.0123 0.03], sum(t>=20 & t<60), 1);
+
+% Metrics for report/tuning
+idxStep = (t>=20 & t<60);
+
+e = z(idxStep,:) - r(idxStep,:);
+maxAbsErr = max(abs(e), [], 1); % max |z-r| under steget
+
+idxLast = (t>=55 & t<60);
+meanErrLast = mean(z(idxLast,:) - r(idxLast,:), 1);
+
+idxConst = (t>=23 & t<=25);
+var2325 = max(z(idxConst,:), [], 1) - min(z(idxConst,:), [], 1);
+
+disp('max |z-r| during step (z1,z2):'); disp(maxAbsErr)
+disp('mean (z-r) on [55,60) (z1,z2):'); disp(meanErrLast)
+disp('variation of z on [23,25] (z1,z2):'); disp(var2325)
+
+% Plots
+figure; plot(t,z(:,1)); hold on; plot(t,r(:,1)); grid on
+xlabel('min'); ylabel('z_1'); legend('z_1','r_1');
+
+figure; plot(t,z(:,2)); hold on; plot(t,r(:,2)); grid on
+xlabel('min'); ylabel('z_2'); legend('z_2','r_2');
+
+tu = U.time(:);
+V  = U.signals(1).values;   % 
+L  = U.signals(2).values;   
+
+figure; plot(tu,V); hold on; yline(0); yline(5); grid on
+xlabel('min'); ylabel('V'); legend('V','min','max');
+
+figure; plot(tu,L); hold on; yline(0); yline(5); grid on
+xlabel('min'); ylabel('L'); legend('L','min','max');
+
+% Save plots
+outdir = 'fig_52';
+if ~exist(outdir,'dir'), mkdir(outdir); end
+
+saveas(1, fullfile(outdir,'z1_vs_r1.png'));
+saveas(2, fullfile(outdir,'z2_vs_r2.png'));
+saveas(3, fullfile(outdir,'V_with_bounds.png'));
+saveas(4, fullfile(outdir,'L_with_bounds.png'));
+
+%% Result
+% Params: Ts=1, N=70, Q1=diag([110 200]), Q2=6e-4*I
+% Ref: r(t) = [0.0123; 0.03] for 20<=t<60, else 0
+
+% max|z-r| during step:
+% z1 = 0.0081
+% z2 = 0.0183
+
+% mean(z-r) on [55,60):
+% z1 = -0.0024
+% z2 = -0.0020
+%
+% var(z) on [23,25]:
+% z1 = 0.0012
+% z2 = 0.0003
+
+% z2 tracks closer than z1 near end of step; both are ish constant by t=25.
+
